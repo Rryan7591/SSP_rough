@@ -1,0 +1,301 @@
+---
+title: "Seaside Sparrow geographic and subspecies song structure variation analysis"
+output: html_notebook
+---
+........................................................................................................
+
+The first step I took was to measure and count aspects of the song such as the introductory and terminal buzz length as well as the number of syllables in the song. I wanted to examine if a measurable difference existed between subspecies along the Gulf and Atlantic coastlines. To do this I created box plots to examine the physical characteristics of songs between the subspecies. For these plots **S_D** is the total length (sec) for the song, **TB_MeF** is the mean frequency for the terminal buzz, **TB_D** is the duration of the terminal buzz (sec), and **SC** is the number of syllables in the song.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(viridis)
+library(grid)
+library(gridExtra)
+library(dplyr)
+library(tidyr)
+library(ggfortify)
+library(pwr)
+library(readxl)
+Basic <- read_excel("Desktop/Seaside Sparrow Project/R-studio work/SSP Analysis/Complete Song Data v7 R.xlsx", 
+    sheet = "SAC reduced")
+
+Basic$Subspecies <- factor(Basic$Subspecies, levels = c('sennetti','fisheri','juncicola','peninsulae','maritima'), ordered = TRUE)
+
+b1 <- ggplot(Basic, aes(x=Subspecies, y=SC)) + geom_boxplot(aes(fill = Basic$Subspecies))+ theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Syllable Count") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+b2 <- ggplot(Basic, aes(x=Subspecies, y=TB_D)) + 
+  geom_boxplot(aes(fill = Basic$Subspecies)) + theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Terminal Buzz Duration (sec)") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+b3 <- ggplot(Basic, aes(x=Subspecies, y=TB_MeF)) + 
+  geom_boxplot(aes(fill = Basic$Subspecies)) + theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Terminal Buzz Mean Frequency (kHz)") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+b4 <- ggplot(Basic, aes(x=Subspecies, y=S_D)) + 
+  geom_boxplot(aes(fill = Basic$Subspecies)) + theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Song Duration (sec)") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+b5 <- ggplot(Basic, aes(x=Subspecies, y=I_D)) + 
+  geom_boxplot(aes(fill = Basic$Subspecies)) + theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Indroductory phrase duration (sec)") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+b6 <- ggplot(Basic, aes(x=Subspecies, y=TB_Pps)) + 
+  geom_boxplot(aes(fill = Basic$Subspecies)) + theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Terminal Buzz peaks-per-second") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+b7 <- ggplot(Basic, aes(x=Subspecies, y=TB_MaF)) + 
+  geom_boxplot(aes(fill = Basic$Subspecies)) + theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Terminal Buzz Maximum Frequency (kHz)") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+b8 <- ggplot(Basic, aes(x=Subspecies, y=TB_MiF)) + 
+  geom_boxplot(aes(fill = Basic$Subspecies)) + theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Terminal Buzz minimum Frequency (kHz)") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+grid.arrange(b1, b2, b3, b4, b5, b6, b7, b8, nrow = 2, top = "Box Plots For Song Characteristics Between Subspecies Groups")
+
+```
+
+Next, I looked at all of my Song measurements using a PCA to determine what variables had the strongest explanatory power in my data set.
+
+In addition to the variables used in the box plot I also included **S_D** as the total song duration (sec), **TB_MaF & TB_MiF** are the maximum and minimum frequencies for the terminal buzz (kHz), and **TB_Pps** is the number of high frequency peaks per second in the terminal buzz. For the first run the PCA shows that the terminal buzz mean, and max frequency, as well as the song duration and terminal buzz duration are having the greatest impact on the Principle components. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library("devtools")
+library("factoextra")
+library(e1071)
+require(caret)
+
+Basic <- Basic %>% na.omit()
+Basic_1 <- Basic %>% select(4:11)
+
+ssp.pca1 <- prcomp(Basic_1, center = TRUE, scale = TRUE)
+
+pca.plot1 <- fviz_pca_biplot(ssp.pca1, label = "var", axes = c(1, 2), geom = c("point", "text"), 
+                          habillage = Basic$Subspecies, addEllipses = T, 
+                          ellipse.level = 0.95) + scale_color_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+
+print(pca.plot1)
+
+dim1 <- fviz_contrib(ssp.pca1, choice="var", axes=1)+labs(title="Contributions to Dim 1")
+dim2 <- fviz_contrib(ssp.pca1, choice="var", axes=2)+labs(title="Contributions to Dim 2")
+grid.arrange(dim1, dim2, nrow = 1, top = "Varible Weights Within Principle Components")
+```
+
+I refined the PCA to and re-printed the box charts with the the most heavily weighted variables. I aslo included the syllable count variable that the earlier boxplot showed separation between the subspecies.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+Basic$Subspecies <- factor(Basic$Subspecies, levels = c('sennetti','fisheri','juncicola','peninsulae','maritima'), ordered = TRUE)
+b1 <- ggplot(Basic, aes(x=Subspecies, y=SC)) + geom_boxplot(aes(fill = Basic$Subspecies))+ theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Syllable Count") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+b2 <- ggplot(Basic, aes(x=Subspecies, y=S_D)) + 
+  geom_boxplot(aes(fill = Basic$Subspecies)) + theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Song Duration (sec)") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+b3 <- ggplot(Basic, aes(x=Subspecies, y=TB_D)) + 
+  geom_boxplot(aes(fill = Basic$Subspecies)) + theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Terminal Buzz Duration (sec)") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+b4 <- ggplot(Basic, aes(x=Subspecies, y=TB_MeF)) + 
+  geom_boxplot(aes(fill = Basic$Subspecies)) + theme_bw() + theme(legend.position = "none") + xlab("Subspecies") + ylab("Terminal Buzz Mean Frequency (kHz)") + scale_fill_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+grid.arrange(b1, b2, b3, b4, nrow = 2, top = "Box Plots For Song Characteristics Between Subspecies Groups")
+
+Basic_2 <- Basic %>% select(4:7)
+
+ssp.pca2 <- prcomp(Basic_2, center = TRUE, scale = TRUE)
+
+pca.plot2 <- fviz_pca_biplot(ssp.pca2, label = "var", axes = c(1, 2), geom = c("point"), 
+                          habillage = Basic$Subspecies, addEllipses = T, 
+                          ellipse.level = 0.95) + scale_color_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+
+print(pca.plot2)
+
+dim1a <- fviz_contrib(ssp.pca2, choice="var", axes=1)+labs(title="Contributions to Dim 1")
+dim2a <- fviz_contrib(ssp.pca2, choice="var", axes=2)+labs(title="Contributions to Dim 2")
+grid.arrange(dim1a, dim2a, nrow = 1, top = "Varible Weights Within Principle Components")
+```
+
+The PCA ellipse display shows that a significant amount of overlap exists across the subspecies regardless of the variables being examined, showing no clear separation or pattern in measurable song characteristics between subspecies.
+
+The next last step was to examine the syllable identity of each syllable of every song in the dataset to determine if any pattern existed in syllable inclusion based on geographic separation or subspecies designation.
+
+To do this each syllable was examined and separated into six bins: Buzz Syllables, Complex Syllables, Trills, Whistle Syllables, Whistle-buzz Syllables, and Whistle-trill Syllables. Once binned by type each syllable was further grouped into syllable IDs based on morphology and frequency. Approximately 200 syllables were identified. 
+
+I used a power analysis to determine a minimum threshold of nine occurrences of a specific syllable within the dataset to be included in the analysis to weed out possible outliers and improvisations. I then plotted the resulting syllables based on their location and subspecies song that the syllable was recorded in to examine if a pattern existed. 
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggfortify)
+library(pwr)
+
+count(Basic, vars = Basic$Region_M)
+
+pwr.anova.test(k = 353, f = 0.15, sig.level = .05, power = .8)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+states <- map_data("state")
+Coast_set <- subset(states, region %in% c("maine","new hampshire","massachusetts","connecticut",
+                                          "new york","new jersey","delaware","maryland","virginia",
+                                          "north carolina","south carolina","georgia","florida",
+                                          "alabama","mississippi","louisiana","texas","rhode island"))
+ggplot() + geom_polygon(data = Coast_set, aes(x=long, y = lat, group = group)) + 
+  coord_fixed(1.3)
+
+library(readxl)
+Complete_SSP <- read_excel("Desktop/Seaside Sparrow Project/R-studio work/SSP Analysis/Complete Song Data v7 R.xlsx", 
+    sheet = "Multi-variate reduced")
+
+SSP.df.B_all <- Complete_SSP %>% slice(1:39,46:71,81:168,170:246,263:271)
+
+B.all <- ggplot(SSP.df.B_all, aes(x = Longitude, y = Latitude, colour = Subspecies)) + ggtitle("Buzz syllables") +
+  geom_point(alpha = 0.1) + geom_point(size = 0.1) + xlim(-110,-65) + ylim(25,50) + scale_colour_discrete(drop=TRUE, limits = levels(Complete_SSP$Subspecies)) + theme_bw() + theme(legend.position="bottom") + geom_polygon(data = Coast_set, aes(x=long, y = lat, group = group), fill = NA, color = "black") + coord_fixed(1.3) + facet_wrap(~S_ID)
+
+B.all + geom_jitter(width = 0.5, height = 0.5) + scale_color_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+
+# Note Complexes #####################################################################
+
+SSP.df.NC_all <- Complete_SSP %>% slice(c(272:293,301:313,320:367,392:481,503:511,517:545,548:601,
+                                          629:649,678:687))
+
+NC.all <- ggplot(SSP.df.NC_all, aes(x = Longitude, y = Latitude, colour = Subspecies)) + ggtitle("Syllable Complexes") +
+  geom_point(alpha = 0.1) + geom_point(size = 0.1) + xlim(-110,-65) + ylim(25,50) + scale_colour_discrete(drop=TRUE, limits = levels(Complete_SSP$Subspecies)) + theme_bw() + theme(legend.position="bottom") + 
+  geom_polygon(data = Coast_set, aes(x=long, y = lat, group = group), fill = NA, color = "black") + 
+  coord_fixed(1.3) + facet_wrap(~S_ID)
+
+NC.all + geom_jitter(width = 0.5, height = 0.5) + scale_color_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+
+# Trills #####################################################################
+
+SSP.df.T_all <- Complete_SSP %>% slice(c(700:723,727:737,744:757,771:781,796:808))
+
+
+T.all <- ggplot(SSP.df.T_all, aes(x = Longitude, y = Latitude, colour = Subspecies)) + ggtitle("Trills") +
+  geom_point(alpha = 0.1) + geom_point(size = 0.1) + xlim(-110,-65) + ylim(25,50) + scale_colour_discrete(drop=TRUE, limits = levels(Complete_SSP$Subspecies)) + theme_bw() + theme(legend.position="bottom") + 
+  geom_polygon(data = Coast_set, aes(x=long, y = lat, group = group), fill = NA, color = "black") + 
+  coord_fixed(1.3) + facet_wrap(~S_ID)
+
+
+T.all + geom_jitter(width = 0.5, height = 0.5) + scale_color_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+
+# Whistle Notes ###################################################
+
+SSP.df.W_all <- Complete_SSP %>% slice(818:966,977:1049,1066:1163,1167:1194,1207:1219,1226:1235,1253:1268,1297:1305)
+
+W.all <- ggplot(SSP.df.W_all, aes(x = Longitude, y = Latitude, colour = Subspecies)) + ggtitle("Whistle syllables") +
+  geom_point(alpha = 0.1) + geom_point(size = 0.1) + xlim(-110,-65) + ylim(25,50) + scale_colour_discrete(drop=TRUE, limits = levels(Complete_SSP$Subspecies)) + theme_bw() + theme(legend.position="bottom") + 
+  geom_polygon(data = Coast_set, aes(x=long, y = lat, group = group), fill = NA, color = "black") + 
+  coord_fixed(1.3) + facet_wrap(~S_ID)
+
+W.all + geom_jitter(width = 0.5, height = 0.5) + scale_color_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+
+# Whistle-Buzz Notes #####################################################################
+
+SSP.df.WB_all <- Complete_SSP %>% slice(c(1309:1335,1337:1350,1355:1364,1388:1400,1408:1417,1456:1466))
+
+WB.all <- ggplot(SSP.df.WB_all, aes(x = Longitude, y = Latitude, colour = Subspecies)) + ggtitle("Whistle-Buzz Syllables") +
+  geom_point(alpha = 0.1) + geom_point(size = 0.1) + xlim(-110,-65) + ylim(25,50) + scale_colour_discrete(drop=TRUE, limits = levels(Complete_SSP$Subspecies)) + theme_bw() + theme(legend.position="bottom") + 
+  geom_polygon(data = Coast_set, aes(x=long, y = lat, group = group), fill = NA, color = "black") + 
+  coord_fixed(1.3) + facet_wrap(~S_ID)
+
+WB.all + geom_jitter(width = 0.5, height = 0.5) + scale_color_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+
+# Whistle-Trills #####################################################################
+
+SSP.df.WT_all <- Complete_SSP %>% slice(c(1490:1500))
+
+WT.all <- ggplot(SSP.df.WT_all, aes(x = Longitude, y = Latitude, colour = Subspecies)) + ggtitle("Whistle-trill Syllables") +
+  geom_point(alpha = 0.1) + geom_point(size = 0.1) + xlim(-110,-65) + ylim(25,50) + scale_colour_discrete(drop=TRUE, limits = levels(Complete_SSP$Subspecies)) + theme_bw() + theme(legend.position="bottom") + 
+  geom_polygon(data = Coast_set, aes(x=long, y = lat, group = group), fill = NA, color = "black") + 
+  coord_fixed(1.3) + facet_wrap(~S_ID)
+
+WT.all + geom_jitter(width = 0.5, height = 0.5) + scale_color_manual(values = c("fisheri" = "#5DC863FF", "sennetti" = "#B4DE2CFF", "juncicola" = "#440154FF", "peninsulae" = "#21908CFF", "maritima" = "#3B528BFF"))
+```
+```{r message=FALSE, warning=FALSE, include=FALSE}
+count(Complete_SSP, vars = S_ID)
+```
+
+What I have interpreted from these plots is that, broadly speaking, there is no pattern or frequent partitioning of syllables by location or subspecies. My original goal  was to test the current hypothesis touched on by John William Hardy in 1983, **that it is reasonable to assume that sedentary birds such as seaside sparrows, that possess multiple song types within their repertoire, are likely to exhibit geographic variation in song including the formation of dialects.** It would follow that if this theory were true, some partitioning of song through measurable characteristics or localized grouping of select syllables unique to specific populations should be visible. Thus, I am forced to conclude that if such variation or partitioning exists, it is at a finer scale that this analysis can account for. 
+
+An alternative explanation is that the syllables that occur most frequently, do so **because** they are "common" syllables found across the species range. Unfortunately, I am not sure how I could test this without a much larger data set with multiple re-samplings at fixed sites. 
+
+From here I decided to pivot reexamine my data based on a simpler question.
+
+**Does Geographic variation exists between the two coast groups of Seaside Sparrow subspecies?**
+
+To examine this, I first went back and re-created my initial boxplots and PCA, simplifying the grouping by binning each subspecies into an Atlantic coast group or a Gulf coast group.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+Basic$Region_M <- factor(Basic$Region_M, levels = c('Gulf','Atlantic'), ordered = TRUE)
+b1 <- ggplot(Basic, aes(x=Region_M, y=SC)) + geom_boxplot(aes(fill = Basic$Region_M)) + theme_bw() + theme(legend.position = "none") + xlab("Coast Group") + ylab("Syllable Count") + scale_fill_manual(values = c("Atlantic" = "#3B528BFF", "Gulf" = "#5DC863FF"))
+b2 <- ggplot(Basic, aes(x=Region_M, y=S_D)) + 
+  geom_boxplot(aes(fill = Basic$Region_M)) + theme_bw() + theme(legend.position = "none") + xlab("Coast Group") + ylab("Song Duration (sec)") + scale_fill_manual(values = c("Atlantic" = "#3B528BFF", "Gulf" = "#5DC863FF"))
+b3 <- ggplot(Basic, aes(x=Region_M, y=TB_D)) + 
+  geom_boxplot(aes(fill = Basic$Region_M)) + theme_bw() + theme(legend.position = "none") + xlab("Coast Group") + ylab("Terminal Buzz Duration (sec)") + scale_fill_manual(values = c("Atlantic" = "#3B528BFF", "Gulf" = "#5DC863FF"))
+b4 <- ggplot(Basic, aes(x=Region_M, y=TB_MeF)) + 
+  geom_boxplot(aes(fill = Basic$Region_M)) + theme_bw() + theme(legend.position = "none") + xlab("Coast Group") + ylab("Terminal Buzz Mean Frequency (kHz)") + scale_fill_manual(values = c("Atlantic" = "#3B528BFF", "Gulf" = "#5DC863FF"))
+grid.arrange(b1, b2, b3, b4, nrow = 2, top = "Box Plots For Song Characteristics Between Gulf and Atlantic Groups")
+
+Basic <- Basic %>% na.omit()
+Basic_3 <- Basic %>% dplyr::select(4,5,8,10,11)
+
+ssp.pca3 <- prcomp(Basic_3, center = TRUE, scale = TRUE)
+
+pca.plot3 <- fviz_pca_biplot(ssp.pca3, axes = c(1, 2), geom = "point", 
+                          habillage = Basic$Region_M, addEllipses = TRUE, 
+                          ellipse.level = 0.95) + scale_colour_manual(values = c("Atlantic" = "#3B528BFF", "Gulf" = "#5DC863FF"))
+
+print(pca.plot3)
+```
+
+While each of these figures shows significant overlap between the two groups, it is also obvious that measurable variation exists between the two coastal groups. Particularly in the number of syllables contained in each song and in the frequency range for the terminal buzz.
+
+After looking at the distribution of syllables earlier I concluded that no obvious geographic pattern or partitioning could be easily described. I was however curious as to the ratios that existed within shared syllables in the data set. To explore this, and to account for a larger proportion of Gulf coast points in my data set, I randomly sample unique syllables 10,000 times from within each coastal group with replacement. I used this new data table to examine if there is a trend in the proportions in which syllables occur between the two coastal groups.
+
+Unfortunately, I am still working on this figure as it is not displaying how I would like it to and is not yet in a polished state. That being said you can still see the proportions of each syllable displayed on the histogram, though I have been unable to properly interpret it thus far.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+Atlantic <- read_excel("Desktop/Seaside Sparrow Project/R-studio work/SSP Analysis/Complete Song Data v7 R.xlsx", 
+                          sheet = "Atlantic1", col_types = c("text", 
+                                                            "text", "numeric", "text", "numeric", 
+                                                            "numeric", "text", "text", "numeric", 
+                                                            "numeric", "numeric", "numeric", 
+                                                            "text"))
+Gulf <- read_excel("Desktop/Seaside Sparrow Project/R-studio work/SSP Analysis/Complete Song Data v7 R.xlsx", 
+                   sheet = "Gulf1", col_types = c("text", 
+                                                     "text", "numeric", "text", "numeric", 
+                                                     "numeric", "text", "text", "numeric", 
+                                                     "numeric", "numeric", "numeric", 
+                                                     "text"))
+
+
+TestA <- sample_n(Atlantic, 100000, replace = TRUE)
+TestB <- sample_n(Gulf, 100000, replace = TRUE)
+TestC <- rbind(TestA, TestB)
+TestD <- TestC %>% select(1,2,8,13)
+TestD <- TestD %>% dplyr::group_by(S_ID, Region_M) %>% dplyr::summarise(n=n()) %>% dplyr::mutate(proportion = n/sum(n))
+TestD
+TestE <- TestD %>% select(1,3:4)
+
+
+
+ggplot(TestD, aes(x = reorder(TestD$S_ID, -proportion, FUN = min), y = reorder(TestD$proportion, Region_M, FUN = median), fill = TestD$Region_M)) + geom_bar(stat = 'identity') + coord_flip() + scale_fill_manual(values = c("Atlantic" = "#3B528BFF", "Gulf" = "#5DC863FF")) + xlab("Syllable Identity") + ylab("Proportion within sample set") + ggtitle("Proportion of syllable occurance between Atlantic and Gulf groups") +labs(fill = "Coast group") + theme_bw()
+
+```
+
+Finally, I thought to look at the rate of syllable accumulation between the two coastal groups. To do this I constructed an accumulation curve of syllables for the entire data set and overlaid it with an additional curve for each coast group.  
+
+```{r}
+library(vegan)
+library(readxl)
+SAC <- read_excel("Desktop/Seaside Sparrow Project/R-studio work/SSP Analysis/Complete Song Data v7 R.xlsx", 
+    sheet = "SAC1")
+
+sac_SSP <- SAC
+total.syllables <- specaccum(sac_SSP, method = "random", permutations = 1000, conditioned =TRUE, gamma = "jack1",  w = NULL)
+
+
+#subset each habitat into its own df
+sac_SSP %>% filter(Region_M == 1) -> Atlantic
+sac_SSP %>% filter(Region_M == 2) -> Gulf
+
+#calc species accumulation curve for each habitat
+Atlantic.coast = specaccum(Atlantic, method = "random", permutations = 1000)
+Gulf.coast = specaccum(Gulf, method = "random", permutations = 1000)
+
+#plot curve_all first
+plot(total.syllables, xlab = "Number of songs analyzed", ylab = "Number of syllables", main = "Syllable accumulation curve", col = "gray") 
+#then plot the rest
+plot(Atlantic.coast, add = TRUE, col = "#3B528BFF") 
+plot(Gulf.coast, add = TRUE, col = "#5DC863FF")
+legend("bottomright", c("Total Syllables", "Atlantic", "Gulf"),col=c("black","#3B528BFF","#5DC863FF"),lty=1,bty='n',inset=0.025)
+```
+
+This graph tells us several things, the first is that the total accumulation curve has not yet leveled off. This means that despite having over 200 syllables identified, we have likely not captured the full diversity of syllable types. The second is that the Atlantic group appears to include or generate new syllables at a faster rate than the Gulf group.
+
+All of these analyses and figures tell us several things about the song of the seaside sparrow in regard to subspecies and regional (coastal) variation. We know that there is no large or obvious geographic variation, dialect formation, or patterning in song characteristics or specific syllable inclusion between the various subspecies of the Seaside Sparrow. However, when grouped by region into an Atlantic and Gulf grouping, we begin to see distinction in several categories between the two. The first is that there is a measurable different in the average number of syllables included in the song and the Terminal Buzz mean frequency for each group. The second is that while the Gulf group has more syllables in its song on average, the Atlantic group appears to generate or incorporate new syllables at a faster rate than the Gulf group. 
+
+
+
+........................................................................................................
+
+
