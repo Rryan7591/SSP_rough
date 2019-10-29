@@ -101,6 +101,21 @@ The next last step was to examine the syllable identity of each syllable of ever
 To do this each syllable was examined and separated into six bins: Buzz Syllables, Complex Syllables, Trills, Whistle Syllables, Whistle-buzz Syllables, and Whistle-trill Syllables. Once binned by type each syllable was further grouped into syllable IDs based on morphology and frequency. Approximately 200 syllables were identified. 
 
 I used a power analysis to determine a minimum threshold of nine occurrences of a specific syllable within the dataset to be included in the analysis to weed out possible outliers and improvisations. I then plotted the resulting syllables based on their location and subspecies song that the syllable was recorded in to examine if a pattern existed. 
+```{r}
+packages<-c("ggsn","leaflet","mapdata","maptools","OpenStreetMap","rgdal","smoothr","sf","sp","tidyverse","tmap")
+sapply(packages, require, character.only=T)
+pal <- colorFactor(c("blue", "purple", "red", "orange", "green"), 
+                   domain = c("maritima", "peninsulae", "juncicola", "fisheri", "sennetti"))
+leaflet() %>% setView(-82.222324, 34.059088, zoom = 4.4) %>% #lat-long of the place of interest
+  addTiles() %>% 
+  addCircleMarkers(Complete_SSP$Longitude, Complete_SSP$Latitude, data = Complete_SSP, 
+                   color = ~pal(Complete_SSP$Subspecies)) %>% addLegend(pal = pal, 
+                                                                values = Complete_SSP$Subspecies, 
+                                                                group = "circles", 
+                                                                position = "bottomright")
+```
+
+
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 library(ggplot2)
 library(dplyr)
